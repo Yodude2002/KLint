@@ -17,6 +17,13 @@ import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.serialName
 
+fun KtAnnotationEntry.isThrowsAnnotation(): Boolean {
+    return setOf("kotlin.jvm.Throws", "kotlin.Throws")
+        .contains(this.calleeExpression
+            ?.resolveReceiverType()
+            ?.serialName()
+        )
+}
 fun KtFunction.annotatedThrows(): List<KotlinType> {
     return this.annotationEntries
             .filterNotNull()
@@ -24,18 +31,13 @@ fun KtFunction.annotatedThrows(): List<KotlinType> {
             .flatten()
 }
 fun throwsFromAnnotation(annotation: KtAnnotationEntry): List<KotlinType>? {
-    if (!setOf("kotlin.jvm.Throws", "kotlin.Throws")
-        .contains(annotation.calleeExpression
-            ?.resolveReceiverType()
-            ?.serialName()
-        )
-    ) return null
+    if (!annotation.isThrowsAnnotation()) return null
 
     return annotation.valueArgumentList
             ?.arguments
             ?.map { it.getArgumentExpression() }
             ?.filterIsInstance<KtClassLiteralExpression>()
-            ?.mapNotNull { it.resolveExprType()?.arguments?.get(0)?.type }
+            ?.mapNotNull { it.resolveExprType()?.arguments?.getOrNull(0)?.type }
             ?: listOf()
 }
 
